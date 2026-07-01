@@ -34,6 +34,7 @@ app.patch('/api/todos/:id', (req, res) => {
   const todo = todos.find(t => t.id === id);
   todo.done = !todo.done; 
   res.json(todo);
+   console.log(`todo done`);
 });
 
 // DELETE
