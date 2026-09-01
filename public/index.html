@@ -34,9 +34,12 @@
     .group-parent { display:flex; align-items:flex-start; gap:12px; padding:16px 18px; }
     .group-parent .task-text { color:#302b71; }
     .group.done .group-parent .task-text { color:var(--muted); }
-    .group-children { margin:0; padding:12px 18px 16px 50px; border-top:1px solid #e5e3f5; background:#f5f4ff; }
-    .subtask-heading { margin:0 0 8px; color:#6a63ae; font-size:.72rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
-    .subtask-list { margin:0; padding-left:13px; border:0; border-left:2px solid #bdb7f2; border-radius:0; overflow:visible; }
+    .group-children { margin:0; border-top:1px solid #e5e3f5; background:#f5f4ff; }
+    .subtask-heading { display:flex; align-items:center; justify-content:space-between; margin:0; padding:11px 18px 11px 50px; color:#5c55a3; cursor:pointer; font-size:.76rem; font-weight:750; letter-spacing:.04em; list-style:none; text-transform:uppercase; user-select:none; }
+    .subtask-heading::-webkit-details-marker { display:none; }
+    .subtask-heading::after { content:'⌄'; font-size:1rem; line-height:1; transition:transform .18s ease; }
+    .group-children:not([open]) .subtask-heading::after { transform:rotate(-90deg); }
+    .subtask-list { margin:0 18px 16px 50px; padding-left:13px; border:0; border-left:2px solid #bdb7f2; border-radius:0; overflow:visible; }
     .subtask-list li { position:relative; margin-bottom:7px; padding:10px; gap:9px; border:1px solid #dedbf5; border-radius:10px; background:#fff; }
     .subtask-list li:last-child { margin-bottom:0; }
     .subtask-list li::before { position:absolute; top:19px; left:-14px; width:12px; border-top:2px solid #c9c5f5; content:""; }
@@ -49,9 +52,13 @@
     .badge { border-radius:999px; padding:2px 7px; font-weight:650; text-transform:capitalize; background:#f0f1f5; }
     .high { color:#a63131; background:#ffeded; } .medium { color:#8b5c00; background:#fff4d6; } .low { color:#237451; background:#e7f7ee; }
     .actions { display:flex; gap:4px; }
+    .priority-select { width:auto; padding:5px 7px; color:var(--muted); border-color:transparent; background:#f1f2f6; font-size:.78rem; }
+    .priority-select:focus { border-color:var(--brand); outline:0; }
     .icon { padding:5px 8px; color:var(--muted); background:transparent; font-size:.9rem; }
     .icon:hover { color:var(--ink); background:#f1f2f6; }
     .empty { padding:44px 18px; color:var(--muted); text-align:center; }
+    .section-heading { padding:14px 18px 8px; border:0; color:var(--muted); background:#fafbfe; font-size:.74rem; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+    .section-heading + li { border-top:1px solid var(--line); }
     .status { min-height:20px; padding:10px 18px 0; color:#b42318; font-size:.85rem; }
     .modal-backdrop { position:fixed; inset:0; z-index:10; display:grid; place-items:center; padding:20px; background:#17203366; }
     .modal-backdrop[hidden] { display:none; }
@@ -111,6 +118,7 @@
   <script>
     let todos = [];
     let filter = 'all';
+    const expandedGroups = new Set();
     let todoToDelete = null;
     let parentForSubtask = null;
     let parentToComplete = null;
@@ -124,42 +132,69 @@
     function isChildOf(todo, parentId) { return Number(todo.parentId) === Number(parentId); }
     function renderTodos() {
       const search = document.getElementById('search').value.toLowerCase();
-      const matches = todo => (filter === 'all' || (filter === 'done' ? todo.done : !todo.done)) && todo.text.toLowerCase().includes(search);
-      const visibleTodos = todos.filter(todo => !todo.parentId && (matches(todo) || todos.some(child => isChildOf(child, todo.id) && matches(child))));
+      const roots = todos.filter(todo => !todo.parentId);
+      const isFamilyComplete = todo => todo.done && todos.filter(child => isChildOf(child, todo.id)).every(child => child.done);
+      const matchesSearch = todo => todo.text.toLowerCase().includes(search) || todos.some(child => isChildOf(child, todo.id) && child.text.toLowerCase().includes(search));
+      const visibleTodos = roots.filter(todo => matchesSearch(todo) && (filter === 'all' || (filter === 'done' ? isFamilyComplete(todo) : !isFamilyComplete(todo))));
 
       const list = document.getElementById('list');
       list.innerHTML = '';
 
       if (!visibleTodos.length) { list.innerHTML = '<li class="empty">No tasks here yet.</li>'; return; }
-      visibleTodos.forEach(t => {
+      const activeTodos = visibleTodos.filter(todo => !isFamilyComplete(todo));
+      const completedTodos = visibleTodos.filter(isFamilyComplete);
+      const appendSection = (title, items) => {
+        if (!items.length) return;
+        const heading = document.createElement('li');
+        heading.className = 'section-heading';
+        heading.textContent = title;
+        list.appendChild(heading);
+        items.forEach(renderTodo);
+      };
+
+      if (filter === 'all') {
+        appendSection('To do', activeTodos);
+        appendSection('Completed', completedTodos);
+      } else {
+        appendSection(filter === 'active' ? 'To do' : 'Completed', visibleTodos);
+      }
+    }
+
+    function renderTodo(t) {
         const li = createTaskItem(t, false);
-        const subtasks = todos.filter(child => isChildOf(child, t.id) && matches(child));
+        const subtasks = todos.filter(child => isChildOf(child, t.id));
         if (subtasks.length) {
           li.classList.add('group');
           const parentRow = document.createElement('div');
           parentRow.className = 'group-parent';
           while (li.firstChild) parentRow.appendChild(li.firstChild);
-          const heading = document.createElement('div');
+          const heading = document.createElement('summary');
           heading.className = 'subtask-heading';
-          heading.textContent = `Subtasks · ${subtasks.length}`;
+          heading.textContent = `${subtasks.length} subtask${subtasks.length === 1 ? '' : 's'}`;
           const subtaskList = document.createElement('ul');
           subtaskList.className = 'subtask-list';
           subtasks.forEach(child => subtaskList.appendChild(createTaskItem(child, true)));
-          const childrenSection = document.createElement('section');
+          const childrenSection = document.createElement('details');
           childrenSection.className = 'group-children';
+          childrenSection.open = expandedGroups.has(t.id);
+          childrenSection.addEventListener('toggle', () => {
+            if (childrenSection.open) expandedGroups.add(t.id);
+            else expandedGroups.delete(t.id);
+          });
           childrenSection.append(heading, subtaskList);
           li.append(parentRow, childrenSection);
         }
         list.appendChild(li);
-      });
     }
 
     function createTaskItem(t, isSubtask) {
         const li = document.createElement('li');
         li.className = t.done ? 'done' : '';
-        li.innerHTML = `<input class="check" type="checkbox" aria-label="Mark task complete" ${t.done ? 'checked' : ''}><div class="task"><span class="task-text"></span><div class="meta">${isSubtask ? '<span class="subtask-kind">Subtask</span>' : '<span class="subtask-kind">Task</span>'}<span class="badge ${t.priority || 'medium'}">${t.priority || 'medium'}</span>${t.dueDate ? `<span>Due ${new Date(t.dueDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>` : ''}</div></div><div class="actions">${isSubtask ? '' : '<button class="icon subtask" aria-label="Add subtask">Subtask</button>'}<button class="icon edit" aria-label="Edit task">Edit</button><button class="icon delete" aria-label="Delete task">Delete</button></div>`;
+        li.innerHTML = `<input class="check" type="checkbox" aria-label="Mark task complete" ${t.done ? 'checked' : ''}><div class="task"><span class="task-text"></span><div class="meta">${isSubtask ? '<span class="subtask-kind">Subtask</span>' : '<span class="subtask-kind">Task</span>'}<span class="badge ${t.priority || 'medium'}">${t.priority || 'medium'}</span>${t.dueDate ? `<span>Due ${new Date(t.dueDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>` : ''}</div></div><div class="actions"><select class="priority-select" aria-label="Change priority"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>${isSubtask ? '' : '<button class="icon subtask" aria-label="Add subtask">Subtask</button>'}<button class="icon edit" aria-label="Edit task">Edit</button><button class="icon delete" aria-label="Delete task">Delete</button></div>`;
         li.querySelector('.task-text').textContent = t.text;
+        li.querySelector('.priority-select').value = t.priority || 'medium';
         li.querySelector('.check').addEventListener('click', event => toggleTask(t, event));
+        li.querySelector('.priority-select').addEventListener('change', event => updateTodo(t.id, { priority: event.target.value }));
         if (!isSubtask) li.querySelector('.subtask').addEventListener('click', () => openSubtaskModal(t));
         li.querySelector('.edit').addEventListener('click', () => editTodo(t));
         li.querySelector('.delete').addEventListener('click', () => openDeleteModal(t.id));
