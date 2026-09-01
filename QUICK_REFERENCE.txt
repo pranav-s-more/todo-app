@@ -1,0 +1,68 @@
+# Screentime Tracker - Quick Reference
+
+## Quick Commands
+
+### First Time Setup
+```powershell
+# 1. Enable script execution (Admin)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# 2. Register auto-run (Admin)
+& "C:\Users\PSM\Desktop\todo-app\Script.ps1" --setup
+
+# 3. Start manually
+& "C:\Users\PSM\Desktop\todo-app\Script.ps1"
+```
+
+### Daily Usage
+- Once setup, tracker **automatically starts when you log in**
+- Reports generate **automatically every hour**
+- Check reports in: `%USERPROFILE%\ScreentimeReports\`
+
+### Generate Reports On-Demand
+```powershell
+& "C:\Users\PSM\Desktop\todo-app\Script.ps1" --generate-reports
+```
+
+### Stop Tracker
+```powershell
+# Stop all background jobs
+Stop-Job -Name *
+```
+
+### Uninstall Auto-Run
+```powershell
+# Remove scheduled task (Admin)
+Unregister-ScheduledTask -TaskName "ScreentimeTrackerAutoRun" -Confirm:$false
+```
+
+## Reports Location
+```
+📁 C:\Users\YourUsername\ScreentimeReports\
+   ├── 📁 Daily\         → Today's report with app switches
+   ├── 📁 Weekly\        → This week's consolidated report
+   ├── 📁 Monthly\       → This month's daywise breakdown
+   └── 📄 screentime_log.csv  → Raw tracking data
+```
+
+## What You Get
+
+### Daily Report
+✅ Timestamp of every app switch  
+✅ How long each app was active  
+✅ Total screentime for the day
+
+### Weekly Report
+✅ Consolidated stats for the week  
+✅ Day-by-day breakdown  
+✅ Total screentime by app  
+✅ Total weekly screentime
+
+### Monthly Report
+✅ Daywise total screentime (all 30 days)  
+✅ Hours and minutes breakdown  
+✅ Days with no activity marked as 0 hours  
+✅ Total monthly screentime
+
+---
+Last Updated: 2026-07-10
