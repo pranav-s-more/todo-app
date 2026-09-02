@@ -1,0 +1,20 @@
+# See live app logs
+docker compose logs -f app
+
+# See MySQL logs
+docker compose logs -f mysql
+
+# Stop containers but keep them created
+docker compose stop
+
+# Start stopped containers again
+docker compose start
+
+# Stop and remove Compose containers/network
+docker compose down
+
+# Rebuild after changing code, Dockerfile, or dependencies
+docker compose up -d --build
+
+# Restart only the Node.js application
+docker compose restart app

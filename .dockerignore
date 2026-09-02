@@ -3,3 +3,4 @@ node_modules
 .gitignore
 .env
 npm-debug.log
+logs

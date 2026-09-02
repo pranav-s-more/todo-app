@@ -15,6 +15,16 @@ let db;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ status: 'ok' });
+  } catch (error) {
+    log('ERROR', `GET /health | ${error.message}`);
+    res.status(503).json({ status: 'unavailable' });
+  }
+});
+
 function log(level, message) {
   const entry = `[${new Date().toISOString()}] [${level}] ${message}`;
   console.log(entry);
@@ -71,9 +81,9 @@ async function migrateJsonTodos() {
 app.get('/api/todos', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT id, text, done, priority, due_date, parent_id FROM todos ORDER BY id');
-    log('INFO', `GET /api/todos | Total Todos = ${rows.length}`);
+    log('INFO', `GET /api/todos | Total tasks = ${rows.length}`);
     res.json(rows.map(mapTodo));
-  } catch (error) { log('ERROR', `GET /api/todos | ${error.message}`); res.status(500).json({ message: 'Could not load todos' }); }
+  } catch (error) { log('ERROR', `GET /api/todos | ${error.message}`); res.status(500).json({ message: 'Could not load tasks' }); }
 });
 
 app.post('/api/todos', async (req, res) => {
