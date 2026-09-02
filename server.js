@@ -63,7 +63,7 @@ async function migrateJsonTodos() {
       await connection.query('INSERT INTO todos (id, text, done, priority, due_date, parent_id) VALUES (?, ?, ?, ?, ?, ?)', [todo.id, todo.text, Boolean(todo.done), validPriority(todo.priority) ? todo.priority : 'medium', todo.dueDate || null, todo.parentId || null]);
     }
     await connection.commit();
-    log('INFO', `Migrated ${savedTodos.length} todo(s) from data/todos.json to MySQL`);
+    log('INFO', `Migrated ${savedTodos.length} task(s) from data/todos.json to MySQL`);
   } catch (error) { await connection.rollback(); throw error; }
   finally { connection.release(); }
 }
@@ -79,7 +79,7 @@ app.get('/api/todos', async (req, res) => {
 app.post('/api/todos', async (req, res) => {
   const { text, priority = 'medium', dueDate = null, parentId = null } = req.body;
   const cleanedText = typeof text === 'string' ? text.trim() : '';
-  if (!cleanedText) return res.status(400).json({ message: 'Todo text is required' });
+  if (!cleanedText) return res.status(400).json({ message: 'Task text is required' });
   if (!validPriority(priority)) return res.status(400).json({ message: 'Priority must be low, medium, or high' });
   try {
     if (parentId !== null) {
@@ -91,22 +91,22 @@ app.post('/api/todos', async (req, res) => {
     const [result] = await db.query('INSERT INTO todos (text, done, priority, due_date, parent_id) VALUES (?, FALSE, ?, ?, ?)', [cleanedText, priority, dueDate || null, parentId || null]);
     const [rows] = await db.query('SELECT id, text, done, priority, due_date, parent_id FROM todos WHERE id = ?', [result.insertId]);
     const todo = mapTodo(rows[0]);
-    log('INFO', `POST /api/todos | Todo created | id=${todo.id} | text="${todo.text}"`);
+    log('INFO', `POST /api/todos | Task created | id=${todo.id} | text="${todo.text}"`);
     res.status(201).json(todo);
-  } catch (error) { log('ERROR', `POST /api/todos | ${error.message}`); res.status(500).json({ message: 'Could not create todo' }); }
+  } catch (error) { log('ERROR', `POST /api/todos | ${error.message}`); res.status(500).json({ message: 'Could not create task' }); }
 });
 
 app.patch('/api/todos/:id', async (req, res) => {
   const id = Number(req.params.id);
   const { text, done, priority, dueDate, forceComplete = false } = req.body;
-  if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid todo id' });
-  if (text !== undefined && !String(text).trim()) return res.status(400).json({ message: 'Todo text is required' });
+  if (!Number.isInteger(id)) return res.status(400).json({ message: 'Invalid task id' });
+  if (text !== undefined && !String(text).trim()) return res.status(400).json({ message: 'Task text is required' });
   if (done !== undefined && typeof done !== 'boolean') return res.status(400).json({ message: 'Done must be true or false' });
   if (priority !== undefined && !validPriority(priority)) return res.status(400).json({ message: 'Priority must be low, medium, or high' });
   try {
     const [found] = await db.query('SELECT id, done, parent_id FROM todos WHERE id = ?', [id]);
     const todo = found[0];
-    if (!todo) return res.status(404).json({ message: 'Todo not found' });
+    if (!todo) return res.status(404).json({ message: 'Task not found' });
     if (done && !todo.done && !forceComplete) {
       const [[{ total }]] = await db.query('SELECT COUNT(*) AS total FROM todos WHERE parent_id = ? AND done = FALSE', [id]);
       if (total) return res.status(409).json({ message: 'This task still has pending subtasks', pendingSubtasks: total });
@@ -127,19 +127,19 @@ app.patch('/api/todos/:id', async (req, res) => {
     if (dueDate !== undefined) { fields.push('due_date = ?'); values.push(dueDate || null); }
     if (fields.length) await db.query(`UPDATE todos SET ${fields.join(', ')} WHERE id = ?`, [...values, id]);
     const [rows] = await db.query('SELECT id, text, done, priority, due_date, parent_id FROM todos WHERE id = ?', [id]);
-    log('INFO', `PATCH /api/todos/${id} | Todo updated`);
+    log('INFO', `PATCH /api/todos/${id} | Task updated`);
     res.json(mapTodo(rows[0]));
-  } catch (error) { log('ERROR', `PATCH /api/todos/${id} | ${error.message}`); res.status(500).json({ message: 'Could not update todo' }); }
+  } catch (error) { log('ERROR', `PATCH /api/todos/${id} | ${error.message}`); res.status(500).json({ message: 'Could not update task' }); }
 });
 
 app.delete('/api/todos/:id', async (req, res) => {
   const id = Number(req.params.id);
   try {
     const [result] = await db.query('DELETE FROM todos WHERE id = ?', [id]);
-    if (!result.affectedRows) return res.status(404).json({ message: 'Todo not found' });
-    log('INFO', `DELETE /api/todos/${id} | Todo deleted`);
+    if (!result.affectedRows) return res.status(404).json({ message: 'Task not found' });
+    log('INFO', `DELETE /api/todos/${id} | Task deleted`);
     res.json({ message: 'Deleted' });
-  } catch (error) { log('ERROR', `DELETE /api/todos/${id} | ${error.message}`); res.status(500).json({ message: 'Could not delete todo' }); }
+  } catch (error) { log('ERROR', `DELETE /api/todos/${id} | ${error.message}`); res.status(500).json({ message: 'Could not delete task' }); }
 });
 
 initializeDatabase()

@@ -1,4 +1,6 @@
 {
+  "name": "taskolab",
+  "private": true,
   "scripts": {
     "start": "node server.js"
   },
