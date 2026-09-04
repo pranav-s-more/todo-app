@@ -452,17 +452,48 @@ function selectedAssignmentIds(pickerId) {
     .filter(id => Number.isSafeInteger(id) && id > 0);
 }
 
+function updateAssignmentPickerSummary(picker) {
+  const selectedIds = selectedAssignmentIds(picker.id);
+  const selectedMembers = state.members.filter(member => selectedIds.some(id => sameId(getUserId(member), id)));
+  const selection = picker.querySelector('.assignment-selection');
+  if (!selection) return;
+  if (!selectedMembers.length) selection.textContent = 'Unassigned';
+  else if (selectedMembers.length === 1) selection.textContent = getMemberName(selectedMembers[0]);
+  else selection.textContent = `${selectedMembers.length} selected`;
+}
+
+function filterAssignmentOptions(picker, searchText = '') {
+  const query = searchText.trim().toLowerCase();
+  picker.querySelectorAll('.assignment-option').forEach(option => {
+    option.hidden = Boolean(query) && !String(option.dataset.memberName || '').includes(query);
+  });
+}
+
+function closeAssignmentPicker(pickerId) {
+  const picker = byId(pickerId);
+  if (picker) picker.open = false;
+}
+
 function renderAssignmentPicker(pickerId, selectedIds = []) {
   const picker = byId(pickerId);
   if (!picker) return;
   const options = picker.querySelector('.assignment-options');
+  const search = picker.querySelector('.assignment-search');
+  const help = picker.querySelector('.assignment-picker-help');
+  const shouldShowSearch = state.members.length > 6;
   options.innerHTML = '';
+  if (search) {
+    search.value = '';
+    search.hidden = !shouldShowSearch;
+  }
+  if (help) help.hidden = !shouldShowSearch;
   const selected = new Set(selectedIds.map(String));
   if (!state.members.length) {
     const empty = document.createElement('p');
     empty.className = 'assignment-empty';
     empty.textContent = 'Add workspace members before assigning work.';
     options.appendChild(empty);
+    updateAssignmentPickerSummary(picker);
     return;
   }
   state.members.forEach(member => {
@@ -470,15 +501,23 @@ function renderAssignmentPicker(pickerId, selectedIds = []) {
     if (memberId === null || memberId === undefined) return;
     const label = document.createElement('label');
     label.className = 'assignment-option';
+    label.dataset.memberName = `${getMemberName(member)} ${getMemberEmail(member)}`.toLowerCase();
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.value = String(memberId);
     input.checked = selected.has(String(memberId));
     input.disabled = !canEditWorkspace();
     input.setAttribute('aria-label', `Assign ${getMemberName(member)}`);
+    input.addEventListener('change', () => updateAssignmentPickerSummary(picker));
     label.append(input, document.createTextNode(getMemberName(member)));
     options.appendChild(label);
   });
+  if (search) {
+    search.oninput = shouldShowSearch
+      ? () => filterAssignmentOptions(picker, search.value)
+      : null;
+  }
+  updateAssignmentPickerSummary(picker);
 }
 
 function populateAssigneeSelects(selectedByPicker = {}) {
@@ -737,6 +776,7 @@ async function addTodo(event) {
     const assigneeIds = selectedAssignmentIds('task-assignment-picker');
     await request(`${currentWorkspacePath()}/tasks`, { method: 'POST', body: { text: input.value, priority: byId('priority').value, dueDate: byId('due-date').value || null, assigneeIds } });
     byId('todo-form').reset();
+    closeAssignmentPicker('task-assignment-picker');
     populateAssigneeSelects();
     showError();
     await loadTasksAndActivity();
@@ -833,6 +873,7 @@ function openEditModal(todo) {
 
 function closeEditModal() {
   state.todoToEdit = null;
+  closeAssignmentPicker('edit-assignment-picker');
   closeModal(editModal);
 }
 
@@ -871,6 +912,7 @@ function openSubtaskModal(parent) {
 function closeSubtaskModal() {
   state.parentForSubtask = null;
   byId('subtask-form').reset();
+  closeAssignmentPicker('subtask-assignment-picker');
   populateAssigneeSelects();
   closeModal(subtaskModal);
 }
