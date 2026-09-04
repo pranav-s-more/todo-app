@@ -2,52 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Taskolab</title>
+  <title>Taskolab | Collaborative workspaces</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#5647d6" />
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <main>
-    <header><h1>Taskolab</h1><p>Plan, organize, and move work forward.</p></header>
-    <section class="card">
-      <form class="create" id="todo-form">
-        <input id="new-task" type="text" maxlength="200" placeholder="What needs to get done?" autocomplete="off" required />
-        <div class="create-options"><select id="priority" aria-label="Priority"><option value="medium">Medium priority</option><option value="high">High priority</option><option value="low">Low priority</option></select><input id="due-date" type="date" aria-label="Due date" /></div>
-        <button type="submit">Add task</button>
-      </form>
-      <div class="toolbar"><input id="search" type="search" placeholder="Search tasks" aria-label="Search tasks" /><div class="filters" aria-label="Task filter"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="active">Active</button><button class="filter" data-filter="done">Done</button></div></div>
-      <p class="status" id="status" role="alert"></p><ul id="list"></ul>
+  <div class="auth-shell" id="auth-view">
+    <section class="auth-intro" aria-label="About Taskolab">
+      <a class="brand brand-light" href="/" aria-label="Taskolab home"><span class="brand-mark">T</span><span>Taskolab</span></a>
+      <div class="auth-copy">
+        <p class="eyebrow">Collaborative workspaces</p>
+        <h1>Bring every important task into focus.</h1>
+        <p>Taskolab helps teams organize projects, assign clear ownership, and keep a useful record of work.</p>
+      </div>
+      <ul class="auth-features" aria-label="Taskolab features">
+        <li><span aria-hidden="true">✓</span> Shared workspaces and roles</li>
+        <li><span aria-hidden="true">✓</span> Parent tasks and subtasks</li>
+        <li><span aria-hidden="true">✓</span> Assignment and activity history</li>
+      </ul>
     </section>
+
+    <main class="auth-main">
+      <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-card-heading">
+          <p class="eyebrow">Welcome to Taskolab</p>
+          <h2 id="auth-title">Sign in to your workspace</h2>
+          <p id="auth-description">Use your account to continue where your team left off.</p>
+        </div>
+        <p class="form-message" id="auth-status" role="alert" aria-live="polite"></p>
+
+        <form id="login-form" class="auth-form">
+          <label>Email<input id="login-email" type="email" autocomplete="email" placeholder="you@company.com" required /></label>
+          <label>Password<input id="login-password" type="password" autocomplete="current-password" placeholder="Your password" required /></label>
+          <button type="submit" class="button button-primary button-wide">Sign in</button>
+        </form>
+
+        <form id="register-form" class="auth-form" hidden>
+          <label>Your name<input id="register-name" type="text" autocomplete="name" maxlength="100" placeholder="How should your team know you?" required /></label>
+          <label>Email<input id="register-email" type="email" autocomplete="email" placeholder="you@company.com" required /></label>
+          <label>Password<input id="register-password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required /></label>
+          <button type="submit" class="button button-primary button-wide">Create account</button>
+        </form>
+
+        <p class="auth-switch"><span id="auth-switch-copy">New to Taskolab?</span> <button id="auth-switch" type="button" class="text-button">Create an account</button></p>
+      </section>
+    </main>
+  </div>
+
+  <main class="app-shell" id="app-view" hidden>
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="Taskolab home"><span class="brand-mark">T</span><span>Taskolab</span></a>
+      <div class="header-actions">
+        <button class="icon-button mobile-workspace-toggle" id="mobile-workspace-toggle" type="button" aria-label="Open workspaces" aria-expanded="false">☰</button>
+        <button class="user-menu" id="user-menu" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" id="user-avatar">U</span>
+          <span class="user-menu-copy"><strong id="user-name">Your account</strong><small id="user-email">you@company.com</small></span>
+          <span aria-hidden="true">⌄</span>
+        </button>
+        <div class="user-menu-popover" id="user-menu-popover" hidden>
+          <button id="logout-button" type="button">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <aside class="workspace-sidebar" id="workspace-sidebar" aria-label="Workspaces">
+        <div class="sidebar-heading"><span>Workspaces</span><button id="open-workspace-modal" class="icon-button" type="button" aria-label="Create workspace">+</button></div>
+        <nav id="workspace-list" class="workspace-list" aria-label="Your workspaces"></nav>
+        <button id="open-workspace-modal-empty" class="new-workspace-button" type="button" hidden>+ Create your first workspace</button>
+        <div class="sidebar-footer"><span class="status-dot"></span><span>Workspace sync enabled</span></div>
+      </aside>
+
+      <section class="work-area" aria-label="Workspace tasks">
+        <div id="workspace-empty" class="workspace-empty" hidden>
+          <div class="empty-illustration" aria-hidden="true">✦</div>
+          <p class="eyebrow">Start collaborating</p>
+          <h1>Create your first workspace</h1>
+          <p>A workspace keeps a project, its members, tasks, and activity in one place.</p>
+          <button id="create-first-workspace" class="button button-primary" type="button">Create workspace</button>
+        </div>
+
+        <div id="workspace-content" hidden>
+          <div class="workspace-title-row">
+            <div>
+              <p class="eyebrow" id="workspace-role">Workspace</p>
+              <h1 id="workspace-title">Workspace</h1>
+              <p class="workspace-description" id="workspace-description"></p>
+            </div>
+            <div class="workspace-actions">
+              <button id="open-members-modal" class="button button-secondary" type="button"><span aria-hidden="true">♙</span> Members <span id="member-count" class="count-pill">0</span></button>
+              <button id="open-activity-panel" class="button button-secondary activity-toggle" type="button" aria-expanded="true"><span aria-hidden="true">◷</span> Activity</button>
+            </div>
+          </div>
+
+          <section class="task-card">
+            <form class="create" id="todo-form">
+              <input id="new-task" type="text" maxlength="200" placeholder="What needs to get done?" autocomplete="off" required />
+              <div class="create-options">
+                <select id="priority" aria-label="Priority"><option value="medium">Medium priority</option><option value="high">High priority</option><option value="low">Low priority</option></select>
+                <input id="due-date" type="date" aria-label="Due date" />
+                <fieldset class="assignment-picker" id="task-assignment-picker">
+                  <legend>Assign to</legend>
+                  <span class="assignment-picker-help">Select one or more workspace members.</span>
+                  <div class="assignment-options" role="group" aria-label="Task assignees"></div>
+                </fieldset>
+              </div>
+              <button type="submit" class="button button-primary">Add task</button>
+            </form>
+            <div class="toolbar"><input id="search" type="search" placeholder="Search tasks" aria-label="Search tasks" /><div class="filters" aria-label="Task filter"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="active" type="button">Active</button><button class="filter" data-filter="done" type="button">Done</button></div></div>
+            <p class="status" id="status" role="alert" aria-live="polite"></p><ul id="list"></ul>
+          </section>
+        </div>
+      </section>
+
+      <aside class="activity-panel" id="activity-panel" aria-label="Workspace activity">
+        <div class="activity-heading"><div><p class="eyebrow">Workspace timeline</p><h2>Recent activity</h2></div><button id="close-activity-panel" class="icon-button" type="button" aria-label="Close activity panel">×</button></div>
+        <div id="activity-list" class="activity-list"></div>
+      </aside>
+    </div>
   </main>
+
   <div class="modal-backdrop" id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title" hidden>
-    <div class="modal">
-      <h2 id="delete-title">Delete task?</h2>
-      <p id="delete-message">This task will be permanently removed from your list.</p>
-      <div class="modal-actions"><button class="cancel" id="cancel-delete" type="button">Cancel</button><button class="danger" id="confirm-delete" type="button">Delete task</button></div>
-    </div>
+    <div class="modal"><h2 id="delete-title">Delete task?</h2><p id="delete-message">This task will be permanently removed from your workspace.</p><div class="modal-actions"><button class="button button-secondary" id="cancel-delete" type="button">Cancel</button><button class="button button-danger" id="confirm-delete" type="button">Delete task</button></div></div>
   </div>
+
   <div class="modal-backdrop" id="subtask-modal" role="dialog" aria-modal="true" aria-labelledby="subtask-title" hidden>
-    <form class="modal" id="subtask-form">
-      <h2 id="subtask-title">Add a subtask</h2>
-      <p id="subtask-parent">Break this task into a smaller next step.</p>
-      <input id="subtask-text" type="text" maxlength="200" placeholder="What is the next step?" autocomplete="off" required />
-      <div class="create-options subtask-options"><select id="subtask-priority" aria-label="Subtask priority"><option value="medium">Medium priority</option><option value="high">High priority</option><option value="low">Low priority</option></select><input id="subtask-due-date" type="date" aria-label="Subtask due date" /></div>
-      <div class="modal-actions subtask-actions"><button class="cancel" id="cancel-subtask" type="button">Cancel</button><button type="submit">Add subtask</button></div>
-    </form>
+    <form class="modal" id="subtask-form"><h2 id="subtask-title">Add a subtask</h2><p id="subtask-parent">Break this task into a smaller next step.</p><label>Subtask<input id="subtask-text" type="text" maxlength="200" placeholder="What is the next step?" autocomplete="off" required /></label><div class="create-options subtask-options"><select id="subtask-priority" aria-label="Subtask priority"><option value="medium">Medium priority</option><option value="high">High priority</option><option value="low">Low priority</option></select><input id="subtask-due-date" type="date" aria-label="Subtask due date" /></div><fieldset class="assignment-picker" id="subtask-assignment-picker"><legend>Assign to</legend><span class="assignment-picker-help">Select one or more workspace members.</span><div class="assignment-options" role="group" aria-label="Subtask assignees"></div></fieldset><div class="modal-actions subtask-actions"><button class="button button-secondary" id="cancel-subtask" type="button">Cancel</button><button class="button button-primary" type="submit">Add subtask</button></div></form>
   </div>
+
+  <div class="modal-backdrop" id="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title" hidden>
+    <form class="modal" id="edit-form"><h2 id="edit-title">Edit task</h2><p>Update the task details and assignees for everyone in this workspace.</p><label>Task name<input id="edit-text" type="text" maxlength="200" required /></label><div class="edit-fields"><label>Priority<select id="edit-priority"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label><label>Due date<input id="edit-due-date" type="date" /></label></div><fieldset class="assignment-picker" id="edit-assignment-picker"><legend>Assign to</legend><span class="assignment-picker-help">Select one or more workspace members.</span><div class="assignment-options" role="group" aria-label="Task assignees"></div></fieldset><div class="modal-actions"><button class="button button-secondary" id="cancel-edit" type="button">Cancel</button><button class="button button-primary" type="submit">Save changes</button></div></form>
+  </div>
+
   <div class="modal-backdrop" id="pending-modal" role="dialog" aria-modal="true" aria-labelledby="pending-title" hidden>
-    <div class="modal">
-      <h2 id="pending-title">Subtasks still pending</h2>
-      <p id="pending-message"></p>
-      <div class="modal-actions"><button class="cancel" id="cancel-pending" type="button">Keep working</button><button id="confirm-parent-complete" type="button">Complete anyway</button></div>
-    </div>
+    <div class="modal"><h2 id="pending-title">Subtasks still pending</h2><p id="pending-message"></p><div class="modal-actions"><button class="button button-secondary" id="cancel-pending" type="button">Keep working</button><button class="button button-primary" id="confirm-parent-complete" type="button">Complete anyway</button></div></div>
   </div>
+
   <div class="modal-backdrop" id="due-date-modal" role="dialog" aria-modal="true" aria-labelledby="due-date-title" hidden>
-    <div class="modal">
-      <h2 id="due-date-title">Subtask deadline is too late</h2>
-      <p id="due-date-message"></p>
-      <div class="modal-actions"><button id="close-due-date-warning" type="button">Choose another date</button></div>
-    </div>
+    <div class="modal"><h2 id="due-date-title">Subtask deadline is too late</h2><p id="due-date-message"></p><div class="modal-actions"><button class="button button-primary" id="close-due-date-warning" type="button">Choose another date</button></div></div>
+  </div>
+
+  <div class="modal-backdrop" id="workspace-modal" role="dialog" aria-modal="true" aria-labelledby="workspace-modal-title" hidden>
+    <form class="modal" id="workspace-form"><h2 id="workspace-modal-title">Create workspace</h2><p>Create a shared home for one project or area of work.</p><label>Workspace name<input id="workspace-name-input" type="text" maxlength="120" placeholder="For example, Product launch" required /></label><label>Description <span class="optional">(optional)</span><textarea id="workspace-description-input" maxlength="500" placeholder="What will this workspace help your team accomplish?"></textarea></label><div class="modal-actions"><button class="button button-secondary" id="cancel-workspace" type="button">Cancel</button><button class="button button-primary" type="submit">Create workspace</button></div></form>
+  </div>
+
+  <div class="modal-backdrop" id="members-modal" role="dialog" aria-modal="true" aria-labelledby="members-modal-title" hidden>
+    <section class="modal modal-wide"><div class="modal-heading-row"><div><h2 id="members-modal-title">Workspace members</h2><p>Add registered Taskolab users and control what they can do in this workspace.</p></div><button id="close-members-modal" class="icon-button" type="button" aria-label="Close member management">×</button></div><form id="invite-member-form" class="invite-form"><label class="sr-only" for="invite-email">Member email</label><input id="invite-email" type="email" placeholder="registered.user@company.com" required /><select id="invite-role" aria-label="Member role"><option value="editor">Editor</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select><button class="button button-primary" type="submit">Add member</button></form><p class="form-message" id="member-status" role="alert" aria-live="polite"></p><div id="member-list" class="member-list"></div><div class="role-legend"><strong>Roles:</strong> Owner controls the workspace. Admins manage members. Editors create and update tasks. Viewers can read workspace information.</div></section>
+  </div>
+
+  <div class="modal-backdrop" id="remove-member-modal" role="dialog" aria-modal="true" aria-labelledby="remove-member-title" hidden>
+    <div class="modal"><h2 id="remove-member-title">Remove member?</h2><p id="remove-member-message">This person will lose access to the workspace and its tasks.</p><div class="modal-actions"><button class="button button-secondary" id="cancel-remove-member" type="button">Cancel</button><button class="button button-danger" id="confirm-remove-member" type="button">Remove member</button></div></div>
   </div>
 
   <script src="/js/app.js" defer></script>

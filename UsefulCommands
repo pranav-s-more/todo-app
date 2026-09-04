@@ -4,17 +4,32 @@ docker compose logs -f app
 # See MySQL logs
 docker compose logs -f mysql
 
+# See the one-time restricted database-account setup result
+# "Exited (0)" for db-init is the expected successful state.
+docker compose logs db-init
+
+# See service health, container state, and host port bindings
+docker compose ps
+
+# Start or update the full local stack after changing app code, Dockerfile,
+# Compose configuration, or dependencies. Database data stays in its named volume.
+docker compose up -d --build
+
+# Run non-destructive API health and authentication-boundary checks
+npm run smoke
+
+# Inspect shared-assignment status counts (MySQL prompts for the password)
+docker compose exec mysql mysql -u root -p todo_app -e "SELECT status, COUNT(*) AS assignment_count FROM task_assignments GROUP BY status;"
+
 # Stop containers but keep them created
 docker compose stop
 
 # Start stopped containers again
 docker compose start
 
-# Stop and remove Compose containers/network
+# Stop and remove Compose containers/network while preserving the named database volume.
+# Never append -v unless you intentionally want to erase the database volume.
 docker compose down
-
-# Rebuild after changing code, Dockerfile, or dependencies
-docker compose up -d --build
 
 # Restart only the Node.js application
 docker compose restart app

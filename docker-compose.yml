@@ -4,22 +4,37 @@ services:
   app:
     build:
       context: .
-    env_file:
-      - .env
     environment:
       # Docker service names provide internal DNS. This overrides the local .env value.
       DB_HOST: mysql
       DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      # The application receives only its restricted DB credential, never the
+      # MySQL root password used by the one-time bootstrap service.
+      DB_APP_USER: ${DB_APP_USER}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      PORT: ${PORT:-5000}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:5000}
     ports:
-      - "5000:5000"
+      # Local development only: do not expose the app directly to the LAN.
+      - "127.0.0.1:5000:5000"
     depends_on:
       mysql:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     volumes:
       # Keep local application logs available outside the container.
       - ./logs:/app/logs
     networks:
       - taskolab-network
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test:
         [
@@ -32,13 +47,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   mysql:
     image: mysql:8.4
-    env_file:
-      - .env
     environment:
+      # Compose reads these values from `.env` for interpolation. Do not inject
+      # unrelated application values such as JWT secrets into the DB container.
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
     volumes:
@@ -52,19 +72,56 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
+
+  # Runs with MySQL root credentials only long enough to create/grant the
+  # restricted application user. It has no host port and exits after success.
+  db-init:
+    image: mysql:8.4
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_APP_USER: ${DB_APP_USER}
+      MYSQL_APP_PASSWORD: ${DB_APP_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./docker/mysql-init.sh:/usr/local/bin/taskolab-mysql-init:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/taskolab-mysql-init"]
+    networks:
+      - taskolab-network
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: "no"
 
   adminer:
     image: adminer:4.8.1
     environment:
       ADMINER_DEFAULT_SERVER: mysql
     ports:
-      - "8080:8080"
+      # Adminer is a local operations tool and must not be publicly exposed.
+      - "127.0.0.1:8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - taskolab-network
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 networks:
